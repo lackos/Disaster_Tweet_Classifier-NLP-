@@ -1,4 +1,4 @@
-## "Bag of words" model
+## "Bag of words" model based on the code tutorial by
 
 import pandas as pd
 import numpy as np
@@ -18,21 +18,22 @@ import xgboost as xgb
 
 import random
 
-from model_evaluation import model_cm, report, ROC_plot
+from model_evaluation import model_cm, report, ROC_plot, score_model
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'Data')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'Output')
+MODEL_DIR = os.path.join(OUTPUT_DIR, 'Models')
+SUB_DIR = os.path.join(OUTPUT_DIR, 'Submissions')
 
-def load_data(split=0.9):
+def load_data(split=0.9, random_state=None):
     """
     Splits the data into training and validation sets.
     """
     data = pd.read_csv(os.path.join(DATA_DIR, "train.csv"), index_col="id")
 
-    # Shuffle data
-    train_data = data.sample(frac=1, random_state=7)
-    print(train_data.head())
+    # Shuffle data. Based on the choice of random state.
+    train_data = data.sample(frac=1, random_state=random_state)
 
     texts = train_data.text.values
     labels = [{"POSITIVE": bool(y), "NEGATIVE": not bool(y)}
@@ -100,10 +101,11 @@ def evaluate(model, texts, labels):
 
     return accuracy, score
 
-def score_model(true_labels, predicted_labels):
-    score = f1_score(true_labels, predicted_labels)
-    # print("F1 score is: " + str(round(score, 3)))
-    return score
+def save_model(model, model_name):
+    """
+    Output the trained model to disk in the Output/Models Directory
+    """
+    model.to_disk(os.path.join(MODEL_DIR, model_name))
 
 
 def main():
@@ -142,19 +144,21 @@ def main():
     accuracy, _ = evaluate(nlp, val_texts, val_labels)
     print(f"Accuracy: {accuracy:.4f}")
 
-    # n_iters = 10
-    # for i in range(n_iters):
-    #     losses = train(nlp, train_data, optimizer)
-    #     accuracy, score = evaluate(nlp, val_texts, val_labels)
-    #     print(f"Loss: {losses['textcat']:.3f} \t Accuracy: {accuracy:.3f} \t f1_score: {score:.3f}")
+    n_iters = 3
+    for i in range(n_iters):
+        losses = train(nlp, train_data, optimizer)
+        accuracy, score = evaluate(nlp, val_texts, val_labels)
+        print(f"Loss: {losses['textcat']:.3f} \t Accuracy: {accuracy:.3f} \t f1_score: {score:.3f}")
 
-    predictions = predict(nlp, val_texts).tolist()
-    true_labels = [int(each['cats']['POSITIVE']) for each in val_labels]
-    print(type(predictions))
-    print(type(true_labels))
-    print(model_cm(true_labels, predictions, True))
-    report(true_labels, predictions)
-    ROC_plot(true_labels, predictions)
+    save_model(nlp, 'Basic_BOW')
+
+    # predictions = predict(nlp, val_texts).tolist()
+    # true_labels = [int(each['cats']['POSITIVE']) for each in val_labels]
+    # print(type(predictions))
+    # print(type(true_labels))
+    # print(model_cm(true_labels, predictions, True))
+    # report(true_labels, predictions)
+    # ROC_plot(true_labels, predictions)
 if __name__ == "__main__":
     main()
     # score_model()

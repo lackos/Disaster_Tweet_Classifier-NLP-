@@ -1,0 +1,9 @@
+{
+  "exclusive_classes":true,
+  "architecture":"bow",
+  "labels":[
+    "NEGATIVE",
+    "POSITIVE"
+  ],
+  "pretrained_vectors":null
+}
