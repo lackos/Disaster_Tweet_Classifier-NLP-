@@ -13,8 +13,9 @@ from sklearn.svm import LinearSVC, SVC
 from sklearn import feature_extraction, linear_model, model_selection, preprocessing
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit, GridSearchCV, RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
+import preprocessing as pp
 
-from model_evaluation import model_cm, report, ROC_plot, score_model
+import model_evaluation as model_eval
 
 import xgboost as xgb
 import warnings
@@ -49,6 +50,7 @@ def load_model(model_name):
     model = pickle.load(model_file)
     model_file.close()
     print("Model successfully loaded.")
+
     return model
 
 def Grid_search_CV(X_train, y_train):
@@ -92,6 +94,8 @@ def Radial_SVM_Random_search_CV(X_train, y_train, samples=10):
     print("The best parameters are %s with a score of %0.2f"
       % (grid.best_params_, grid.best_score_))
 
+    return grid.best_params_
+
 def load_word_vectors(model_name, vector_name):
     """
     Loads the words vectors for each tweet.
@@ -101,7 +105,7 @@ def load_word_vectors(model_name, vector_name):
     print("Word vectors successfully loaded.")
     return vecs
 
-def create_word_vectors(model, model_name, output=False):
+def create_word_vectors(model, model_name, output=False, disable_pipes=True):
     """
     Creates the word vectors using the spaCy en_core_web_lg core model for each
     of the tweets in the training set. 'model_name' stores the word vectors in the
@@ -110,9 +114,12 @@ def create_word_vectors(model, model_name, output=False):
     ## Load the data
     train_df = pd.read_csv(os.path.join(DATA_DIR, "train.csv"), index_col = 'id')
 
-    with model.disable_pipes():
+    if disable_pipes == True:
+        with model.disable_pipes():
+            vecs = np.array([model(tweet['text']).vector for idx, tweet in train_df.iterrows()])
+    else:
+        model.add_pipe(hashtag_pipe)
         vecs = np.array([model(tweet['text']).vector for idx, tweet in train_df.iterrows()])
-
     if output == True:
         if not os.path.exists(os.path.join(MODEL_DIR, model_name.title())):
             os.makedirs(os.path.join(MODEL_DIR, model_name.title()))
@@ -183,36 +190,50 @@ def create_submission(filename, preds_test, X_test):
     submission = pd.DataFrame({'id': X_test.index, 'target': preds_test})
     submission.to_csv(os.path.join(OUTPUT_DIR, filename), index=False)
 
-def main():
+def main(create_sub=False):
     ## Load the data
-    train_df = pd.read_csv(os.path.join(DATA_DIR, "train.csv"), index_col = 'id')
-    test_df = pd.read_csv(os.path.join(DATA_DIR, "test.csv"), index_col = 'id')
+    train_df, test_df = pp.load_data()
+
+    ## Lowercase all the text in the tweets
+    train_df = pp.lowercase_df(train_df)
+    test_df = pp.lowercase_df(test_df)
 
     nlp = spacy.load('en_core_web_lg')
 
-    # vecs = create_word_vectors(nlp, 'linear_vectorizer', output=True)
-    vecs = load_word_vectors('linear_vectorizer', 'training_word_vectors.npy')
+    # vecs = create_word_vectors(nlp, 'linear_vectorizer_lower_case_hashtag', output=True, disable_pipes=False)
+    vecs = load_word_vectors('linear_vectorizer_lower_case', 'training_word_vectors.npy')
 
     X_train, X_val, y_train, y_val = train_test_split(vecs, train_df['target'], test_size=0.1, random_state=1)
 
+    ## Hyper-parameter optimization
     # Grid_search_CV(X_train, y_train)
-    # Radial_SVM_Random_search_CV(X_train, y_train, 50)
-    # The best parameters are {'gamma': 0.0001, 'C': 1000000.0} with a score of 0.77
+    # best_params = Radial_SVM_Random_search_CV(X_train, y_train, 40)
+
+    ## Fit and run models
     # The best parameters are {'gamma': 0.001, 'C': 10000.0} with a score of 0.77
-    rbf_svm, _ = radial_SVM(X_train, X_val, y_train, y_val, {'gamma': 0.001, 'C': 10000.0})
-    save_model(rbf_svm, "RBF_SVM")
-    # rbf_svm = load_model("RBF_SVM")
+    # rbf_svm, valid_preds = radial_SVM(X_train, X_val, y_train, y_val, {'gamma': 0.1, 'C': 10.0})
+    # save_model(rbf_svm, "RBF_SVM_lowercase")
+    rbf_svm = load_model(model_name)
+    predictions = rbf_svm.predict(X_val)
+
+
     # polynomial_SVM(X_train, X_val, y_train, y_val)
-    # sigmoid_SVM(X_train, X_val, y_train, y_val)
 
-    ## test vectors
+    ## Save the model and generate the performance report.
+    model_name = "RBF_SVM_lowercase"
+    model_dir = os.path.join(MODEL_DIR, model_name.title())
+    model_eval.generate_model_report(model_dir, model_name, y_val, predictions)
 
-    # with nlp.disable_pipes():
-    #     test_vectors = np.array([nlp(tweet['text']).vector for idx, tweet in test_df.iterrows()])
-    #
-    # preds_test = rbf_svm.predict(test_vectors)
-    # print(preds_test)
-    # create_submission("rbf_submission1.csv", preds_test, test_df)
+    if create_sub == True:
+        # Apply model on Test data set for submission
+        with nlp.disable_pipes():
+            test_vectors = np.array([nlp(tweet['text']).vector for idx, tweet in test_df.iterrows()])
+        # nlp.add_pipe(hashtag_pipe)
+        # test_vectors = np.array([nlp(tweet['text']).vector for idx, tweet in train_df.iterrows()])
+
+        preds_test = rbf_svm.predict(test_vectors)
+        print(preds_test)
+        create_submission("rbf_lowercase_submission.csv", preds_test, test_df)
 
 if __name__ == "__main__":
     main()
