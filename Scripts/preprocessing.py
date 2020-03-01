@@ -14,8 +14,6 @@ from sklearn import feature_extraction, linear_model, model_selection, preproces
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit, GridSearchCV, RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
 
-from model_evaluation import model_cm, report, ROC_plot, score_model
-
 import xgboost as xgb
 import warnings
 

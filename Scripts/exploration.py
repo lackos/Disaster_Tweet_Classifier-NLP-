@@ -51,10 +51,10 @@ def main():
     testing = pd.read_csv(os.path.join(DATA_DIR, "test.csv"), index_col = 'id')
     print(training.columns)
     print(training.head())
-    # class_balance(training, 'target')
+    class_balance(training, 'target')
 
-    training = lowercase_df(training)
-    tokenization(training)
+    # training = lowercase_df(training)
+    # tokenization(training)
     # lowercase_df(training)
 
 

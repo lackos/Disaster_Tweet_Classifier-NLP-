@@ -43,7 +43,9 @@ def save_model(model, model_name):
     print("Model successfully saved.")
 
 def load_model(model_name):
-
+    """
+    Loads the specified model.
+    """
     model_location = os.path.join(os.path.join(MODEL_DIR, model_name.title()), model_name + '.sav')
     print(model_location)
     model_file= open(model_location, 'rb')
@@ -53,32 +55,16 @@ def load_model(model_name):
 
     return model
 
-def Grid_search_CV(X_train, y_train):
-    """
-    Hyper parameter grid search for gamma and C in radial bais SVM.
-    """
-    ## Define the range of values to search through for both hyper parameters
-    ## Total of 169 combinations for this run.
-    C_range = np.logspace(-2, 10, 13)
-    gamma_range = np.logspace(-9, 3, 13)
-    param_grid = dict(gamma=gamma_range, C=C_range)
-
-    ## Cross validated the results.
-    cv = StratifiedShuffleSplit(n_splits=5, test_size=0.2, random_state=42)
-    grid = GridSearchCV(SVC(), param_grid=param_grid, cv=cv)
-    grid.fit(X_train, y_train)
-
-    ## Print the results.
-    print("The best parameters are %s with a score of %0.2f"
-      % (grid.best_params_, grid.best_score_))
-
 def Radial_SVM_Random_search_CV(X_train, y_train, samples=10):
     """
-    Hyper parameter grid search for gamma and C in radial bais SVM. Uses all the
-    available processors.
+    Hyper parameter grid search for gamma and C in radial bais SVM.
+
+    Keyword arguments:
+    X_train -- dataframe of training features (required)
+    y_train -- dataframe of training predictors  (requires)
+    samples -- number of random variable searched in the domain (default 10)
     """
     ## Define the range of values to search through for both hyper parameters
-    ## Total of 169 combinations for this run.
     print("Starting Hyper parameter search using random grid search.")
     C_range = np.logspace(-2, 10, 13)
     gamma_range = np.logspace(-9, 3, 13)
@@ -129,6 +115,16 @@ def create_word_vectors(model, model_name, output=False, disable_pipes=True):
     return vecs
 
 def linear_SVC(X_train, X_val, y_train, y_val):
+    """
+    Trains a linear SVM model with the training data and scores the model based on
+    the validation data.
+
+    Keyword arguments:
+    X_train -- dataframe of training features (required)
+    y_train -- dataframe of training predictors  (required)
+    X_val -- dataframe of validation features (required)
+    y_val -- dataframe of validation predictors  (required)
+    """
     # Create the LinearSVC model
     LSVC = LinearSVC(dual=False)
     # Fit the model
@@ -141,8 +137,17 @@ def linear_SVC(X_train, X_val, y_train, y_val):
     return LSVC, predictions
 
 def xgb_model(X_train, X_val, y_train, y_val):
+    """
+    Trains an XGBoost model linear SVM model with the training data and scores
+    the model based on the validation data.
+
+    Keyword arguments:
+    X_train -- dataframe of training features (required)
+    y_train -- dataframe of training predictors  (required)
+    X_val -- dataframe of validation features (required)
+    y_val -- dataframe of validation predictors  (required)
+    """
     # Create XGBoost model
-    # xg_reg = xgb.XGBClassifier(feval=score_model)
     xgb_class = xgb.XGBClassifier()
     xg_class.fit(X_train,y_train)
 
@@ -154,26 +159,55 @@ def xgb_model(X_train, X_val, y_train, y_val):
     return xgb_class, predictions
 
 def radial_SVM(X_train, X_val, y_train, y_val, params={'gamma': 0.0001, 'C': 1000000.0}):
+    """
+    Trains a radial basis SVM model with the training data and scores the model based on
+    the validation data.
+
+    Keyword arguments:
+    X_train -- dataframe of training features (required)
+    y_train -- dataframe of training predictors  (required)
+    X_val -- dataframe of validation features (required)
+    y_val -- dataframe of validation predictors  (required)
+    params -- Radial basis function kernel parameters
+    """
     ## Create radial basis function SVM model (default)
     RBF_SVM = SVC(**params)
     RBF_SVM.fit(X_train, y_train)
     predictions = RBF_SVM.predict(X_val)
-    # print(y_val.tolist())
-    # print(predictions)
+
     print("Radial basis SVM score: " + str(score_model(y_val, predictions)))
     return RBF_SVM, predictions
 
 def polynomial_SVM(X_train, X_val, y_train, y_val):
+    """
+    Trains a polynomial SVM model with the training data and scores the model based on
+    the validation data.
+
+    Keyword arguments:
+    X_train -- dataframe of training features (required)
+    y_train -- dataframe of training predictors  (required)
+    X_val -- dataframe of validation features (required)
+    y_val -- dataframe of validation predictors  (required)
+    """
     ## Create radial basis function SVM model (default)
     poly_SVM = SVC(kernel='poly', C=100)
     poly_SVM.fit(X_train, y_train)
     predictions = poly_SVM.predict(X_val)
-    # print(y_val.tolist())
-    # print(predictions)
+
     print("polynomial basis SVM score: " + str(score_model(y_val, predictions)))
     return poly_SVM, predictions
 
 def sigmoid_SVM(X_train, X_val, y_train, y_val):
+    """
+    Trains a sigmoid SVM model with the training data and scores the model based on
+    the validation data.
+
+    Keyword arguments:
+    X_train -- dataframe of training features (required)
+    y_train -- dataframe of training predictors  (required)
+    X_val -- dataframe of validation features (required)
+    y_val -- dataframe of validation predictors  (required)
+    """
     ## Create radial basis function SVM model (default)
     sig_SVM = SVC(kernel='sigmoid', C=1.00)
     sig_SVM.fit(X_train, y_train)
@@ -186,6 +220,11 @@ def sigmoid_SVM(X_train, X_val, y_train, y_val):
 def create_submission(filename, preds_test, X_test):
     """
     Creates a submission file for the Kaggle competition.
+
+    Keyword arguments:
+    filename -- name of submission file (required)
+    preds_test -- prediction of test features  (required)
+    X_test -- test set of features (required)
     """
     submission = pd.DataFrame({'id': X_test.index, 'target': preds_test})
     submission.to_csv(os.path.join(OUTPUT_DIR, filename), index=False)
@@ -210,6 +249,7 @@ def main(create_sub=False):
     # best_params = Radial_SVM_Random_search_CV(X_train, y_train, 40)
 
     ## Fit and run models
+    model_name = "RBF_SVM_lowercase"
     # The best parameters are {'gamma': 0.001, 'C': 10000.0} with a score of 0.77
     # rbf_svm, valid_preds = radial_SVM(X_train, X_val, y_train, y_val, {'gamma': 0.1, 'C': 10.0})
     # save_model(rbf_svm, "RBF_SVM_lowercase")
@@ -220,9 +260,8 @@ def main(create_sub=False):
     # polynomial_SVM(X_train, X_val, y_train, y_val)
 
     ## Save the model and generate the performance report.
-    model_name = "RBF_SVM_lowercase"
     model_dir = os.path.join(MODEL_DIR, model_name.title())
-    model_eval.generate_model_report(model_dir, model_name, y_val, predictions)
+    model_eval.generate_model_report(model_name, model_dir, y_val, predictions)
 
     if create_sub == True:
         # Apply model on Test data set for submission
