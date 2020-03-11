@@ -93,10 +93,10 @@ def generate_model_report(model_name, model_directory, true_labels, predicted_la
     report.write("AUC (area under ROC curve) score: " + str(round(roc_auc_score(true_labels, predicted_labels),2)) + '\n')
     report.write("\n\n")
     report.write("### Confusion Matrix \n")
-    report.write("<img src='{0}' width='150'> \n\n".format(CM) )
+    report.write("<img src='{0}' width='250'> \n\n".format(CM) )
     report.write(classification_report(true_labels, predicted_labels))
     report.write("### ROC Curve \n")
-    report.write("<img src='{0}' width='150'> \n\n".format(ROC) )
+    report.write("<img src='{0}' width='250'> \n\n".format(ROC) )
     report.write("The dashed line represents random classification.")
     report.close()
 

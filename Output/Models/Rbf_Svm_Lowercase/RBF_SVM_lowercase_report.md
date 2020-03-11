@@ -1,12 +1,12 @@
-## Model report and score 
-### Single Score statistics 
+## Model report and score
+### Single Score statistics
 f1 score: 0.74
 
 AUC (area under ROC curve) score: 0.79
 
 
-### Confusion Matrix 
-<img src='RBF_SVM_lowercase_cm.png' width='150'> 
+### Confusion Matrix
+<img src='RBF_SVM_lowercase_cm.png' width='150'>
 
               precision    recall  f1-score   support
 
@@ -16,7 +16,7 @@ AUC (area under ROC curve) score: 0.79
     accuracy                           0.80       762
    macro avg       0.81      0.79      0.79       762
 weighted avg       0.81      0.80      0.80       762
-### ROC Curve 
+### ROC Curve
 <img src='RBF_SVM_lowercase_ROC.png' width='150'> 
 
 The dashed line represents random classification.

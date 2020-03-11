@@ -2,7 +2,7 @@
 [https://www.kaggle.com/c/nlp-getting-started]
 ## About
 This objective of this competition is to use NLP methods to determine if a tweet
-is about a natural disaster or not, a two class classification problem. A large
+is about a natural disaster or not (a two class classification problem). A large
 training data set of ~ 7000 tweets is supplied and a testing set for submission.
 ## Requirements
 ##### Plotting

@@ -46,8 +46,15 @@ def load_data(split=0.9, random_state=None):
     return texts[:split], train_labels, texts[split:], val_labels
 
 def train(model, train_data, optimizer):
+    """
+    Trains the bow model using small batches of the training set iteratively.
+
+    Keyword Arguments:
+    model - Model to train
+    train_data - Training Data (as df)
+    """
     losses = {}
-    random.seed(1)
+    # random.seed(1)
     random.shuffle(train_data)
 
     batches = minibatch(train_data, size=8)
