@@ -1,5 +1,3 @@
-## "Bag of words" model based on the code tutorial by
-
 import pandas as pd
 import numpy as np
 
@@ -13,12 +11,20 @@ import spacy
 from spacy.util import minibatch
 
 from sklearn.metrics import f1_score, classification_report
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.pipeline import Pipeline
+
+import string
+import nltk
+from nltk.corpus import stopwords
 
 import xgboost as xgb
 
 import random
 
-from model_evaluation import model_cm, report, ROC_plot, score_model
+# from model_evaluation import model_cm, report, ROC_plot, score_model
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'Data')
@@ -114,8 +120,7 @@ def save_model(model, model_name):
     """
     model.to_disk(os.path.join(MODEL_DIR, model_name))
 
-
-def main():
+def spacy_model():
     ## Text classification with spacy and a bag of words model
 
     ## Load the data
@@ -166,6 +171,53 @@ def main():
     # print(model_cm(true_labels, predictions, True))
     # report(true_labels, predictions)
     # ROC_plot(true_labels, predictions)
+
+def text_process(mess):
+    """
+    Takes in a string of text, then performs the following:
+    1. Remove all punctuation
+    2. Remove all stopwords
+    3. Returns a list of the cleaned text
+    """
+    # Check characters to see if they are in punctuation
+    nopunc = [char for char in mess if char not in string.punctuation]
+
+    # Join the characters again to form the string.
+    nopunc = ''.join(nopunc)
+
+    # Now just remove any stopwords
+    return [word for word in nopunc.split() if word.lower() not in stopwords.words('english')]
+
+def sklearn_pipeline():
+    train_df = pd.read_csv(os.path.join(DATA_DIR, "train.csv"), index_col="id")
+    test_df = pd.read_csv(os.path.join(DATA_DIR, "test.csv"), index_col = 'id')
+
+    X = train_df['text']
+    y = train_df['target']
+
+    X_train, X_val, y_train, y_val = train_test_split(X, y, train_size=0.2)
+
+
+
+    pipeline = Pipeline(steps = [('bow_transformer', CountVectorizer(analyzer=text_process)),
+                                # ('tfidf_transformer', TfidfTransformer()),
+                                ('mnb', MultinomialNB())
+                                ])
+
+    scores = cross_val_score(pipeline, X, y, cv=5, scoring='f1_macro', verbose=1, n_jobs=1)
+    print(scores)
+
+    # pipeline.fit(X_train, y_train)
+    # preds = pipeline.predict(X_val)
+
+    # print(classification_report(y_val, preds))
+
+
+
+
+def main():
+    sklearn_pipeline()
+
 if __name__ == "__main__":
     main()
     # score_model()

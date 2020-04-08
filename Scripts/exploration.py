@@ -13,6 +13,7 @@ import seaborn as sns
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'Data')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'Output')
+PLOT_DIR = os.path.join(OUTPUT_DIR, 'Plots')
 
 def class_balance(training_data, target_col):
     positives = training_data[training_data[target_col] == 1].count()[target_col]
@@ -45,6 +46,54 @@ def lowercase_df(df):
     df['text'] = df.apply(lambda x: x['text'].casefold(), axis=1)
     return df
 
+def data_plots(train_df, test_df):
+    ## Plot the count of each target variable in the training set
+    sns.countplot(x='target', data=train_df)
+
+    plt.title('Target class count')
+
+    plt.savefig(os.path.join(PLOT_DIR, 'target_cnt.png'))
+    plt.close()
+
+    ## Plot the distribution of word count and length
+    ### Create length and word count features in both dataframes
+    train_df['word_count'] = train_df['text'].apply(lambda text: len(text.split(' ')))
+    train_df['length'] = train_df['text'].apply(lambda text: len(text))
+    test_df['word_count'] = test_df['text'].apply(lambda text: len(text.split(' ')))
+    test_df['length'] = test_df['text'].apply(lambda text: len(text))
+    ### First plot the distribution for length and word count with train and test on the same axes
+    fig, (ax1,ax2) = plt.subplots(nrows=1, ncols=2, figsize=(12,6))
+
+    ### Word count distributions
+    sns.distplot(train_df['word_count'], ax=ax1, label='Training Set')
+    sns.distplot(test_df['word_count'], ax=ax1, label='Testing Set')
+
+    ### Length distributions
+    sns.distplot(train_df['length'], ax=ax2, label='Training Set')
+    sns.distplot(test_df['length'], ax=ax2, label='Testing Set')
+
+    ax1.legend()
+    ax2.legend()
+    plt.suptitle('Training and test set distributions')
+
+    plt.savefig(os.path.join(PLOT_DIR, 'word_cnt_length_dists.png'))
+    plt.close()
+
+    ## Plot the word count and length distributions of the training set for each target variable
+    fig, (ax1,ax2) = plt.subplots(nrows=1, ncols=2, figsize=(12,6))
+    sns.distplot(train_df[train_df['target'] == 1]['word_count'], ax=ax1, label='Disaster')
+    sns.distplot(train_df[train_df['target'] == 0]['word_count'], ax=ax1, label='No Disaster')
+
+    sns.distplot(train_df[train_df['target'] == 1]['length'], ax=ax2, label='Disaster')
+    sns.distplot(train_df[train_df['target'] == 0]['length'], ax=ax2, label='No Disaster')
+
+    ax1.legend()
+    ax2.legend()
+    plt.suptitle('Target class distributions')
+
+    plt.savefig(os.path.join(PLOT_DIR, 'target_class_dists.png'))
+    plt.close()
+
 
 def main():
     training = pd.read_csv(os.path.join(DATA_DIR, "train.csv"), index_col="id")
@@ -56,6 +105,7 @@ def main():
     # training = lowercase_df(training)
     # tokenization(training)
     # lowercase_df(training)
+    data_plots(training, testing)
 
 
 if __name__ == "__main__":
