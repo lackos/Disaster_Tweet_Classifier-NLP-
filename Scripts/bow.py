@@ -10,15 +10,17 @@ import scipy.stats as stats
 import spacy
 from spacy.util import minibatch
 
-from sklearn.metrics import f1_score, classification_report
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import f1_score, classification_report, make_scorer, accuracy_score
+from sklearn.model_selection import train_test_split, cross_validate, RandomizedSearchCV
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
+from sklearn.svm import LinearSVC, SVC
 
 import string
 import nltk
 from nltk.corpus import stopwords
+from nltk.stem.porter import PorterStemmer
 
 import xgboost as xgb
 
@@ -177,7 +179,8 @@ def text_process(mess):
     Takes in a string of text, then performs the following:
     1. Remove all punctuation
     2. Remove all stopwords
-    3. Returns a list of the cleaned text
+    3. Stem words.
+    3. Returns a list of the cleaned text in lowercase
     """
     # Check characters to see if they are in punctuation
     nopunc = [char for char in mess if char not in string.punctuation]
@@ -186,34 +189,62 @@ def text_process(mess):
     nopunc = ''.join(nopunc)
 
     # Now just remove any stopwords
-    return [word for word in nopunc.split() if word.lower() not in stopwords.words('english')]
+    word_list = [word for word in nopunc.split() if word.lower() not in stopwords.words('english')]
+
+    # Lowercase all the words
+    word_list = [word.lower() for word in word_list]
+
+    # Stem words
+    porter = PorterStemmer()
+    stemmed = [porter.stem(word) for word in word_list]
+
+    return stemmed
 
 def sklearn_pipeline():
     train_df = pd.read_csv(os.path.join(DATA_DIR, "train.csv"), index_col="id")
     test_df = pd.read_csv(os.path.join(DATA_DIR, "test.csv"), index_col = 'id')
+
+    tweet_19 = train_df.loc[19]['text']
+    print('Original Tweet: ', tweet_19)
+    tweet_19_cleaned = text_process(tweet_19)
+    print('Processed Tweet: ', tweet_19_cleaned)
 
     X = train_df['text']
     y = train_df['target']
 
     X_train, X_val, y_train, y_val = train_test_split(X, y, train_size=0.2)
 
-
+    classifier_dict = {'MNB':MultinomialNB(),
+                       'LSVC':LinearSVC(dual=False),
+                       'poly_SVM':SVC(kernel='poly', C=100),
+                       'sig_SVM':SVC(kernel='sigmoid', C=1.00),
+                       "RBF_SVM":SVC(gamma=0.0001, C=1000000.0)}
 
     pipeline = Pipeline(steps = [('bow_transformer', CountVectorizer(analyzer=text_process)),
-                                # ('tfidf_transformer', TfidfTransformer()),
+                                ('tfidf_transformer', TfidfTransformer()),
                                 ('mnb', MultinomialNB())
                                 ])
 
-    scores = cross_val_score(pipeline, X, y, cv=5, scoring='f1_macro', verbose=1, n_jobs=1)
-    print(scores)
+    scoring = {'f1': 'f1_macro', 'Accuracy': make_scorer(accuracy_score)}
+    CV = cross_validate(pipeline, X, y, cv=5, scoring=scoring, verbose=1, n_jobs=1)
+    # print(CV)
+    print("Cross-Validation Accuracy: {0:.3} \n Cross-Validation F1 Score: {1:.3}".format(CV['test_Accuracy'].mean(), CV['test_f1'].mean()))
 
-    # pipeline.fit(X_train, y_train)
-    # preds = pipeline.predict(X_val)
+    for key, value in classifier_dict.items():
+        print("Classifier " + key)
+        pipeline = Pipeline(steps = [('bow_transformer', CountVectorizer(analyzer=text_process)),
+                                    # ('tfidf_transformer', TfidfTransformer()),
+                                    (key, value)
+                                    ])
+        CV = cross_validate(pipeline, X, y, cv=5, scoring=scoring, verbose=1, n_jobs=1)
+        # print(CV)
+        print("Cross-Validation Accuracy: {0:.3} \n \
+        Cross-Validation F1 Score: {1:.3}".format(CV['test_Accuracy'].mean(), CV['test_f1'].mean()))
 
-    # print(classification_report(y_val, preds))
+    pipeline.fit(X_train, y_train)
+    preds = pipeline.predict(X_val)
 
-
-
+    print(classification_report(y_val, preds))
 
 def main():
     sklearn_pipeline()

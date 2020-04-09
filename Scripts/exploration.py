@@ -6,6 +6,8 @@ import os
 import spacy
 from spacy.matcher import Matcher
 
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -105,7 +107,8 @@ def main():
     # training = lowercase_df(training)
     # tokenization(training)
     # lowercase_df(training)
-    data_plots(training, testing)
+    # data_plots(training, testing)
+    count(training)
 
 
 if __name__ == "__main__":
