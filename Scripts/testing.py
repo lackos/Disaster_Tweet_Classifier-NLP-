@@ -14,8 +14,6 @@ from sklearn import feature_extraction, linear_model, model_selection, preproces
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit, GridSearchCV, RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
 
-from model_evaluation import model_cm, report, ROC_plot, score_model
-
 import xgboost as xgb
 import warnings
 
@@ -64,27 +62,30 @@ def lowercase_df(df):
 
 
 def main():
-    training = pd.read_csv(os.path.join(DATA_DIR, "train.csv"), index_col="id")
-    testing = pd.read_csv(os.path.join(DATA_DIR, "test.csv"), index_col = 'id')
-    print(training.columns)
-    print(training.head())
-    # class_balance(training, 'target')
-
-    # training = lowercase_df(training)
-    # tokenization(training)
-
-    nlp = spacy.load('en_core_web_lg')
-    nlp.add_pipe(hashtag_pipe)
-
-    doc = nlp("twitter #hashtag")
-
-    for token in doc:
-        print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_,
-              token.shape_, token.is_alpha, token.is_stop)
+    # training = pd.read_csv(os.path.join(DATA_DIR, "train.csv"), index_col="id")
+    # testing = pd.read_csv(os.path.join(DATA_DIR, "test.csv"), index_col = 'id')
+    # print(training.columns)
+    # print(training.head())
+    # # class_balance(training, 'target')
+    #
+    # # training = lowercase_df(training)
+    # # tokenization(training)
+    #
+    # nlp = spacy.load('en_core_web_lg')
+    # nlp.add_pipe(hashtag_pipe)
+    #
+    # doc = nlp("twitter #hashtag")
+    #
+    # for token in doc:
+    #     print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_,
+    #           token.shape_, token.is_alpha, token.is_stop)
 
     # assert len(doc) == 2
     # assert doc[0].text == 'twitter'
     # assert doc[1].text == '#hashtag'
+
+    fig, ((ax1), (ax2), (ax3)) = plt.subplots(nrows=3, ncols=1)
+    plt.show()
 
 
 

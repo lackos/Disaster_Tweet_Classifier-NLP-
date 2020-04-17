@@ -65,7 +65,7 @@ import nltk
 from nltk.corpus import stopwords
 ```
 
-First we need to process the text for learning, as seen above there is no need to remove any outliers or anomalous tweets for training. We will remove the punctuation from the text and remove the stopwords from each tweet. We have a function which will clean up each tweet and return a list of the cleaned text.
+First we need to process the text for learning, as seen above there is no need to remove any outliers or anomalous tweets for training though we will need to clean up the tweets themselves. While sklearn's `CountVectorizer` has inbuilt text preprocessing we will define our own processing function here for demonstration. We will remove the punctuation from the text and remove the stopwords from each tweet. We have a function which will clean up each tweet and return a list of the cleaned text.
 
 ```python
 def text_process(mess):
@@ -207,7 +207,7 @@ and we already have an increase of 1%. This is not significant though further pr
 
 #### Stemming words
 
-'Stemming' refers to the reduction of words into a base form. This can significantly reduce the size of the vocabulary as many like words will be reduced into a single 'stem' word.
+'Stemming' refers to the reduction of words into a base form. This can significantly reduce the size of the vocabulary as many like words will be reduced into a single lemma.
 
 To stem our tweets we include another step in our `text_process` function.
 
@@ -247,8 +247,65 @@ Processed Tweet:  ['flood', 'bago', 'myanmar', 'arriv', 'bago']
 
 Interestingly, this had no large affect on the CV Accuracy using MNB classifier
 
-### Removing anomalous words from the tweets
-Coming soon...
+#### Most common words for each classification
+
+As we have built the BoW model it is interesting to look at the most common words for each classificiation. This will also help us in identifying and removing any anomalous words. To generate the word count for the entire set of tweets
+
+```python
+bow = CountVectorizer(analyzer=text_process)
+bow.fit(X)
+X_bow = bow.transform(X)
+word_count = pd.Series(data=X_bow.toarray().sum(axis=0), index=bow.get_feature_names()).sort_values(ascending=False)
+print("Words which appear most: \n", word_count.head(50))
+print("Words which appear least: \n", word_count.tail(50))
+```
+
+There seems to be no anomalous words which appear frequently. On the other hand, there are a large number of anomalous 'words' which only appear once. For example words starting with 'http' are common. Let's remove those by adding the following to the `text_process` function.
+
+```python
+# Remove pattern matched words
+pattern = '^http\w*'
+pat = re.compile(pattern)
+word_list = [word for word in word_list if not pat.match(word)]
+```
+
+This will remove any words beginning with 'http'. Running the lowest frequency words counts will show you that these have been removed. Now it is interesting to see which words appear most for each of the classifications.
+
+```python
+bow = CountVectorizer(analyzer=text_process)
+bow.fit(X)
+
+total_wc = pd.Series(data=X_bow.toarray().sum(axis=0), index=bow.get_feature_names()).sort_values(ascending=False)
+disaster_wc = pd.Series(data=disaster_bow.toarray().sum(axis=0), index=bow.get_feature_names()).sort_values(ascending=False)
+no_disaster_wc = pd.Series(data=no_disaster_bow.toarray().sum(axis=0), index=bow.get_feature_names()).sort_values(ascending=False)
+
+fig, ((ax1), (ax2), (ax3)) = plt.subplots(nrows=3, ncols=1, figsize=(12,18))
+
+plt.suptitle("Most Frequent Words")
+
+sns.barplot(x=total_wc[0:30].values, y=total_wc[0:30].index, ax=ax1)
+ax1.set_title("Complete Training Set")
+
+sns.barplot(x=disaster_wc[0:30].values, y=disaster_wc[0:30].index, ax=ax2)
+ax2.set_title("Disaster Tweets")
+
+sns.barplot(x=no_disaster_wc[0:30].values, y=no_disaster_wc[0:30].index, ax=ax3)
+ax3.set_title("Non Disaster Tweets")
+
+plt.show()
+```
+
+<img src='Output/Plots/Word_counts.png' width='800'>
+
+In general no words in particular stick out as anomalous. Lastly, we will see which of the most common words are common between the two sets. We find the list of words in the top 100 most frequent for disaster and non disaster.
+
+```python
+disaster = set(disaster_wc.index[0:100])
+common = [word for word in no_disaster_wc.index[0:100] if word in disaster]
+print(len(common))
+```
+
+There are 36 common words in the top 100 from each list.
 
 ### Hyper-parameter Optimization
 After preprocessing it is important to optimize the hyperparameters of the pipeline.

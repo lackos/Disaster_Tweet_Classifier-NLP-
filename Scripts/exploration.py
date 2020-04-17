@@ -12,6 +12,13 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+import string
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem.porter import PorterStemmer
+
+from preprocessing import text_process
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'Data')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'Output')
@@ -96,19 +103,70 @@ def data_plots(train_df, test_df):
     plt.savefig(os.path.join(PLOT_DIR, 'target_class_dists.png'))
     plt.close()
 
+def word_counts(train_df, test_df):
+    ## Apply transform to the entire data set
+    # train_df['proc_text'] = train_df['text'].apply(lambda text: text_process(text))
+
+    ## CountVectorizer
+    X = train_df['text']
+    disaster = train_df[train_df['target'] == 1]['text']
+    no_disaster = train_df[train_df['target'] == 0]['text']
+
+    # bow = CountVectorizer(analyzer='word', ngram_range=(1, 1), stop_words='english')
+    bow = CountVectorizer(analyzer=text_process)
+    bow.fit(X)
+    X_bow = bow.transform(X)
+    disaster_bow = bow.transform(disaster)
+    no_disaster_bow = bow.transform(no_disaster)
+
+    # print(X_bow)
+    # print(bow.get_feature_names())
+    # print(X_bow.toarray().sum(axis=0))
+    # print(train_df['proc_text'])
+
+    total_wc = pd.Series(data=X_bow.toarray().sum(axis=0), index=bow.get_feature_names()).sort_values(ascending=False)
+    disaster_wc = pd.Series(data=disaster_bow.toarray().sum(axis=0), index=bow.get_feature_names()).sort_values(ascending=False)
+    no_disaster_wc = pd.Series(data=no_disaster_bow.toarray().sum(axis=0), index=bow.get_feature_names()).sort_values(ascending=False)
+
+    fig, (ax1,ax2) = plt.subplots(nrows=1, ncols=2, figsize=(12,6))
+    sns.countplot(x=total_wc)
+
+    print(no_disaster_wc)
+    fig, ((ax1), (ax2), (ax3)) = plt.subplots(nrows=3, ncols=1, figsize=(12,18))
+
+    plt.suptitle("Most Frequent Words", fontsize=25)
+
+    sns.barplot(x=total_wc[0:30].values, y=total_wc[0:30].index, ax=ax1)
+    ax1.set_title("Complete Training Set")
+
+    sns.barplot(x=disaster_wc[0:30].values, y=disaster_wc[0:30].index, ax=ax2)
+    ax2.set_title("Disaster Tweets")
+
+    sns.barplot(x=no_disaster_wc[0:30].values, y=no_disaster_wc[0:30].index, ax=ax3)
+    ax3.set_title("Non Disaster Tweets")
+
+    # plt.show()
+    plt.savefig(os.path.join(PLOT_DIR, 'Word_counts.png'))
+    plt.close()
+
+    ## Common words between the two classifications
+    disaster = set(disaster_wc.index[0:100])
+    common = [word for word in no_disaster_wc.index[0:100] if word in disaster]
+    print(len(common))
+
 
 def main():
     training = pd.read_csv(os.path.join(DATA_DIR, "train.csv"), index_col="id")
     testing = pd.read_csv(os.path.join(DATA_DIR, "test.csv"), index_col = 'id')
     print(training.columns)
     print(training.head())
-    class_balance(training, 'target')
 
+    # class_balance(training, 'target')
     # training = lowercase_df(training)
     # tokenization(training)
     # lowercase_df(training)
     # data_plots(training, testing)
-    count(training)
+    word_counts(training, testing)
 
 
 if __name__ == "__main__":

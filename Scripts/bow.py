@@ -19,12 +19,12 @@ from sklearn.svm import LinearSVC, SVC
 
 import string
 import nltk
-from nltk.corpus import stopwords
-from nltk.stem.porter import PorterStemmer
 
 import xgboost as xgb
 
 import random
+
+from preprocessing import text_process
 
 # from model_evaluation import model_cm, report, ROC_plot, score_model
 
@@ -174,32 +174,6 @@ def spacy_model():
     # report(true_labels, predictions)
     # ROC_plot(true_labels, predictions)
 
-def text_process(mess):
-    """
-    Takes in a string of text, then performs the following:
-    1. Remove all punctuation
-    2. Remove all stopwords
-    3. Stem words.
-    3. Returns a list of the cleaned text in lowercase
-    """
-    # Check characters to see if they are in punctuation
-    nopunc = [char for char in mess if char not in string.punctuation]
-
-    # Join the characters again to form the string.
-    nopunc = ''.join(nopunc)
-
-    # Now just remove any stopwords
-    word_list = [word for word in nopunc.split() if word.lower() not in stopwords.words('english')]
-
-    # Lowercase all the words
-    word_list = [word.lower() for word in word_list]
-
-    # Stem words
-    porter = PorterStemmer()
-    stemmed = [porter.stem(word) for word in word_list]
-
-    return stemmed
-
 def sklearn_pipeline():
     train_df = pd.read_csv(os.path.join(DATA_DIR, "train.csv"), index_col="id")
     test_df = pd.read_csv(os.path.join(DATA_DIR, "test.csv"), index_col = 'id')
@@ -220,8 +194,8 @@ def sklearn_pipeline():
                        'sig_SVM':SVC(kernel='sigmoid', C=1.00),
                        "RBF_SVM":SVC(gamma=0.0001, C=1000000.0)}
 
-    pipeline = Pipeline(steps = [('bow_transformer', CountVectorizer(analyzer=text_process)),
-                                ('tfidf_transformer', TfidfTransformer()),
+    pipeline = Pipeline(steps = [('bow_transformer', CountVectorizer(analyzer=text_process, ngram_range=(1,2))),
+                                # ('tfidf_transformer', TfidfTransformer()),
                                 ('mnb', MultinomialNB())
                                 ])
 
@@ -230,16 +204,16 @@ def sklearn_pipeline():
     # print(CV)
     print("Cross-Validation Accuracy: {0:.3} \n Cross-Validation F1 Score: {1:.3}".format(CV['test_Accuracy'].mean(), CV['test_f1'].mean()))
 
-    for key, value in classifier_dict.items():
-        print("Classifier " + key)
-        pipeline = Pipeline(steps = [('bow_transformer', CountVectorizer(analyzer=text_process)),
-                                    # ('tfidf_transformer', TfidfTransformer()),
-                                    (key, value)
-                                    ])
-        CV = cross_validate(pipeline, X, y, cv=5, scoring=scoring, verbose=1, n_jobs=1)
-        # print(CV)
-        print("Cross-Validation Accuracy: {0:.3} \n \
-        Cross-Validation F1 Score: {1:.3}".format(CV['test_Accuracy'].mean(), CV['test_f1'].mean()))
+    # for key, value in classifier_dict.items():
+    #     print("Classifier " + key)
+    #     pipeline = Pipeline(steps = [('bow_transformer', CountVectorizer(analyzer=text_process)),
+    #                                 # ('tfidf_transformer', TfidfTransformer()),
+    #                                 (key, value)
+    #                                 ])
+    #     CV = cross_validate(pipeline, X, y, cv=5, scoring=scoring, verbose=1, n_jobs=1)
+    #     # print(CV)
+    #     print("Cross-Validation Accuracy: {0:.3} \n \
+    #     Cross-Validation F1 Score: {1:.3}".format(CV['test_Accuracy'].mean(), CV['test_f1'].mean()))
 
     pipeline.fit(X_train, y_train)
     preds = pipeline.predict(X_val)
@@ -247,7 +221,8 @@ def sklearn_pipeline():
     print(classification_report(y_val, preds))
 
 def main():
-    sklearn_pipeline()
+    # sklearn_pipeline()
+    spacy_model()
 
 if __name__ == "__main__":
     main()

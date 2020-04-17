@@ -14,14 +14,55 @@ from sklearn import feature_extraction, linear_model, model_selection, preproces
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit, GridSearchCV, RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
 
+import string
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem.porter import PorterStemmer
+
 import xgboost as xgb
 import warnings
+
+import random
+import re
+
+
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, 'Data')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'Output')
 MODEL_DIR = os.path.join(OUTPUT_DIR, 'Models')
 SUB_DIR = os.path.join(OUTPUT_DIR, 'Submissions')
+
+def text_process(mess):
+    """
+    Takes in a string of text, then performs the following:
+    1. Remove all punctuation
+    2. Remove all stopwords
+    3. Stem words.
+    4. Returns a list of the cleaned text in lowercase
+    """
+    # Check characters to see if they are in punctuation
+    nopunc = [char for char in mess if char not in string.punctuation]
+
+    # Join the characters again to form the string.
+    nopunc = ''.join(nopunc)
+
+    # Now just remove any stopwords
+    word_list = [word for word in nopunc.split() if word.lower() not in stopwords.words('english')]
+
+    # Lowercase all the words
+    word_list = [word.lower() for word in word_list]
+
+    # Stem words
+    porter = PorterStemmer()
+    word_list = [porter.stem(word) for word in word_list]
+
+    # Remove pattern matched words
+    pattern = '^http\w*'
+    pat = re.compile(pattern)
+    word_list = [word for word in word_list if not pat.match(word)]
+
+    return word_list
 
 def load_data():
     train_df = pd.read_csv(os.path.join(DATA_DIR, "train.csv"), index_col = 'id')
